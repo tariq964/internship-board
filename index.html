@@ -17,33 +17,32 @@
       color: white;
       padding: 28px 8%;
     }
-    header h1 { margin: 0 0 8px; }
     main { max-width: 1000px; margin: 30px auto; padding: 0 18px; }
-    .filters {
+    .filters, .form-grid {
       display: flex;
+      flex-wrap: wrap;
       gap: 12px;
-      margin-bottom: 22px;
+      margin-bottom: 20px;
     }
-    input, select {
+    input, select, textarea, button {
       padding: 12px;
       border: 1px solid #cbd5e1;
       border-radius: 8px;
       font-size: 16px;
-      background: white;
     }
-    input { flex: 1; min-width: 0; }
+    input, select, textarea { background: white; width: 100%; }
+    .filters input { flex: 1; min-width: 180px; }
     .cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 18px;
     }
-    .card {
+    .card, form {
       background: white;
       padding: 22px;
       border-radius: 12px;
       box-shadow: 0 3px 12px #0000000d;
     }
-    .card h2 { font-size: 20px; }
     .tag {
       display: inline-block;
       background: #dbeafe;
@@ -52,10 +51,17 @@
       border-radius: 20px;
       font-size: 13px;
     }
-    .card a { color: #1d4ed8; font-weight: bold; }
-    #message { color: #475569; }
+    button {
+      background: #173b80;
+      color: white;
+      cursor: pointer;
+      border: 0;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    #message, #formMessage { color: #475569; }
+    .field { flex: 1 1 240px; }
+    label { display: block; margin-bottom: 6px; }
     @media (max-width: 600px) {
-      .filters { flex-direction: column; }
       header { padding: 24px 18px; }
     }
   </style>
@@ -69,70 +75,199 @@
   <main>
     <h2>Explore Internships</h2>
     <div class="filters">
-      <input id="search" type="search" placeholder="Search internships..." aria-label="Search internships">
+      <input id="search" type="search"
+        placeholder="Search internships..." aria-label="Search internships">
       <select id="domain" aria-label="Filter by domain">
         <option value="all">All domains</option>
-        <option value="Web Development">Web Development</option>
-        <option value="Data Science">Data Science</option>
-        <option value="AI">AI</option>
       </select>
     </div>
 
-    <p id="message" aria-live="polite"></p>
+    <p id="message" role="status" aria-live="polite">Loading internships...</p>
+    <button id="retry" type="button" hidden>Retry loading</button>
     <section class="cards" id="cards" aria-label="Internship listings"></section>
+
+    <h2>Apply for an Internship</h2>
+    <form id="applicationForm">
+      <div class="form-grid">
+        <div class="field">
+          <label for="internship">Internship</label>
+          <select id="internship" name="internshipId" required>
+            <option value="">Select an internship</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="applicantName">Full name</label>
+          <input id="applicantName" name="applicantName"
+            required minlength="2" maxlength="100">
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email"
+            required maxlength="254">
+        </div>
+      </div>
+      <label for="coverLetter">Why are you applying?</label>
+      <textarea id="coverLetter" name="coverLetter"
+        required minlength="20" maxlength="2000" rows="4"></textarea>
+      <p id="formMessage" role="status" aria-live="polite"></p>
+      <button id="submitButton" type="submit">Submit application</button>
+    </form>
   </main>
 
   <script>
-    const internships = [
-      { title: "Frontend Developer Intern", company: "BrightWeb", domain: "Web Development", mode: "Remote" },
-      { title: "Data Analyst Intern", company: "DataWorks", domain: "Data Science", mode: "Hybrid" },
-      { title: "AI Research Intern", company: "Future Labs", domain: "AI", mode: "Remote" },
-      { title: "Web Developer Intern", company: "Pixel Studio", domain: "Web Development", mode: "On-site" },
-      { title: "Machine Learning Intern", company: "NextGen AI", domain: "AI", mode: "Remote" },
-      { title: "Junior Data Intern", company: "Insight Co.", domain: "Data Science", mode: "Remote" }
-    ];
-
+    const API = "/api";
     const cards = document.getElementById("cards");
     const search = document.getElementById("search");
     const domain = document.getElementById("domain");
     const message = document.getElementById("message");
+    const retry = document.getElementById("retry");
+    const internshipSelect = document.getElementById("internship");
+    const form = document.getElementById("applicationForm");
+    const formMessage = document.getElementById("formMessage");
+    const submitButton = document.getElementById("submitButton");
+
+    let internships = [];
+
+    function addText(parent, tagName, text, className) {
+      const element = document.createElement(tagName);
+      element.textContent = text;
+      if (className) element.className = className;
+      parent.appendChild(element);
+      return element;
+    }
+
+    async function loadInternships() {
+      message.textContent = "Loading internships...";
+      retry.hidden = true;
+      cards.replaceChildren();
+
+      try {
+        const response = await fetch(`${API}/internships`);
+        if (!response.ok) throw new Error("Unable to load internships.");
+
+        const result = await response.json();
+        if (!Array.isArray(result.data)) throw new Error("Invalid API response.");
+
+        internships = result.data;
+        const previousDomain = domain.value;
+
+        domain.replaceChildren();
+        const all = document.createElement("option");
+        all.value = "all";
+        all.textContent = "All domains";
+        domain.appendChild(all);
+
+        [...new Set(internships.map(item => item.domain))].forEach(value => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value;
+          domain.appendChild(option);
+        });
+
+        if ([...domain.options].some(option => option.value === previousDomain)) {
+          domain.value = previousDomain;
+        }
+
+        internshipSelect.replaceChildren();
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Select an internship";
+        internshipSelect.appendChild(placeholder);
+
+        internships.forEach(item => {
+          const option = document.createElement("option");
+          option.value = item.id;
+          option.textContent = `${item.title} — ${item.company}`;
+          internshipSelect.appendChild(option);
+        });
+
+        render();
+      } catch (err) {
+        message.textContent = "Could not load internships. Check your connection and try again.";
+        retry.hidden = false;
+      }
+    }
 
     function render() {
       const term = search.value.trim().toLowerCase();
       const selected = domain.value;
       const results = internships.filter(item =>
         (selected === "all" || item.domain === selected) &&
-        (item.title + " " + item.company + " " + item.domain)
-          .toLowerCase().includes(term)
+        [item.title, item.company, item.domain, item.location]
+          .join(" ").toLowerCase().includes(term)
       );
 
       cards.replaceChildren();
-      message.textContent = results.length
-        ? `${results.length} internship opportunities found`
-        : "No internships found. Try another search.";
+
+      if (!results.length) {
+        message.textContent = "No internships found. Try another search.";
+        return;
+      }
+
+      message.textContent = `${results.length} internship opportunities found`;
 
       results.forEach(item => {
         const card = document.createElement("article");
         card.className = "card";
-
-        const title = document.createElement("h2");
-        title.textContent = item.title;
-        const company = document.createElement("p");
-        company.textContent = item.company;
-        const tag = document.createElement("span");
-        tag.className = "tag";
-        tag.textContent = item.domain;
-        const mode = document.createElement("p");
-        mode.textContent = "Work mode: " + item.mode;
-
-        card.append(title, company, tag, mode);
+        addText(card, "h3", item.title);
+        addText(card, "p", item.company);
+        addText(card, "span", item.domain, "tag");
+        addText(card, "p", `Location: ${item.location}`);
+        addText(card, "p", item.description);
+        const button = addText(card, "button", "Apply");
+        button.type = "button";
+        button.addEventListener("click", () => {
+          internshipSelect.value = String(item.id);
+          form.scrollIntoView({ behavior: "smooth" });
+        });
         cards.appendChild(card);
       });
     }
 
+    retry.addEventListener("click", loadInternships);
     search.addEventListener("input", render);
     domain.addEventListener("change", render);
-    render();
+
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      formMessage.textContent = "";
+
+      if (!form.reportValidity()) return;
+
+      submitButton.disabled = true;
+      submitButton.textContent = "Submitting...";
+
+      const payload = {
+        internshipId: Number(internshipSelect.value),
+        applicantName: document.getElementById("applicantName").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        coverLetter: document.getElementById("coverLetter").value.trim()
+      };
+
+      try {
+        const response = await fetch(`${API}/applications`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error?.message || "Application failed.");
+        }
+
+        formMessage.textContent = "Application submitted successfully.";
+        form.reset();
+      } catch (err) {
+        formMessage.textContent = `${err.message} Please check your details and retry.`;
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "Submit application";
+      }
+    });
+
+    loadInternships();
   </script>
 </body>
 </html>
