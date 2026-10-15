@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Internship Board</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f6fb;
+      color: #172554;
+    }
+    header {
+      background: #173b80;
+      color: white;
+      padding: 28px 8%;
+    }
+    header h1 { margin: 0 0 8px; }
+    main { max-width: 1000px; margin: 30px auto; padding: 0 18px; }
+    .filters {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    input, select {
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 16px;
+      background: white;
+    }
+    input { flex: 1; min-width: 0; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+    }
+    .card {
+      background: white;
+      padding: 22px;
+      border-radius: 12px;
+      box-shadow: 0 3px 12px #0000000d;
+    }
+    .card h2 { font-size: 20px; }
+    .tag {
+      display: inline-block;
+      background: #dbeafe;
+      color: #1d4ed8;
+      padding: 6px 10px;
+      border-radius: 20px;
+      font-size: 13px;
+    }
+    .card a { color: #1d4ed8; font-weight: bold; }
+    #message { color: #475569; }
+    @media (max-width: 600px) {
+      .filters { flex-direction: column; }
+      header { padding: 24px 18px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Internship Board</h1>
+    <p>Discover opportunities and start your career journey.</p>
+  </header>
+
+  <main>
+    <h2>Explore Internships</h2>
+    <div class="filters">
+      <input id="search" type="search" placeholder="Search internships..." aria-label="Search internships">
+      <select id="domain" aria-label="Filter by domain">
+        <option value="all">All domains</option>
+        <option value="Web Development">Web Development</option>
+        <option value="Data Science">Data Science</option>
+        <option value="AI">AI</option>
+      </select>
+    </div>
+
+    <p id="message" aria-live="polite"></p>
+    <section class="cards" id="cards" aria-label="Internship listings"></section>
+  </main>
+
+  <script>
+    const internships = [
+      { title: "Frontend Developer Intern", company: "BrightWeb", domain: "Web Development", mode: "Remote" },
+      { title: "Data Analyst Intern", company: "DataWorks", domain: "Data Science", mode: "Hybrid" },
+      { title: "AI Research Intern", company: "Future Labs", domain: "AI", mode: "Remote" },
+      { title: "Web Developer Intern", company: "Pixel Studio", domain: "Web Development", mode: "On-site" },
+      { title: "Machine Learning Intern", company: "NextGen AI", domain: "AI", mode: "Remote" },
+      { title: "Junior Data Intern", company: "Insight Co.", domain: "Data Science", mode: "Remote" }
+    ];
+
+    const cards = document.getElementById("cards");
+    const search = document.getElementById("search");
+    const domain = document.getElementById("domain");
+    const message = document.getElementById("message");
+
+    function render() {
+      const term = search.value.trim().toLowerCase();
+      const selected = domain.value;
+      const results = internships.filter(item =>
+        (selected === "all" || item.domain === selected) &&
+        (item.title + " " + item.company + " " + item.domain)
+          .toLowerCase().includes(term)
+      );
+
+      cards.replaceChildren();
+      message.textContent = results.length
+        ? `${results.length} internship opportunities found`
+        : "No internships found. Try another search.";
+
+      results.forEach(item => {
+        const card = document.createElement("article");
+        card.className = "card";
+
+        const title = document.createElement("h2");
+        title.textContent = item.title;
+        const company = document.createElement("p");
+        company.textContent = item.company;
+        const tag = document.createElement("span");
+        tag.className = "tag";
+        tag.textContent = item.domain;
+        const mode = document.createElement("p");
+        mode.textContent = "Work mode: " + item.mode;
+
+        card.append(title, company, tag, mode);
+        cards.appendChild(card);
+      });
+    }
+
+    search.addEventListener("input", render);
+    domain.addEventListener("change", render);
+    render();
+  </script>
+</body>
+</html>
