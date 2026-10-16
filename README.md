@@ -127,3 +127,14 @@ API request logging should be verified in the server console before marking it a
 License
 
 This project was created as an internship capstone assignment.
+Project Submission
+
+Live Application
+https://internship-board-5rro.onrender.com
+GitHub Repository
+https://github.com/tariq964/internship-board
+Walkthrough Video
+](https://drive.google.com/file/d/1OOBNSTUFiohBqD2PXQ1DF3sGv012nBnR/view)
+Test Evidence
+
+See TEST_REPORT.md for test results and the security checklist.
